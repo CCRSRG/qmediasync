@@ -74,7 +74,7 @@ func (t *tvShowScrapeImpl) Start() error {
 				for {
 					select {
 					case tvshowTask := <-t.fileTasks:
-						helpers.AppLogger.Infof("清理剩余电视剧刮削任务 %s", filepath.Base(tvshowTask.mediaFile.TvshowPath))
+						helpers.AppLogger.Infof("清理剩余电视剧刮削任务 %d", tvshowTask.mediaFile.ID)
 						wg.Done()
 					case episodeMediaFileID := <-t.episodeTasks:
 						helpers.AppLogger.Infof("清理剩余集刮削任务 %d", episodeMediaFileID)

@@ -500,6 +500,12 @@ func InitUser() {
 		Username: helpers.GlobalConfig.AdminUsername,
 		Password: string(password),
 	}
+	if defaultUser.Username == "" {
+		defaultUser.Username = "admin"
+	}
+	if defaultUser.Password == "" {
+		defaultUser.Password = "admin123"
+	}
 	uerr := db.Db.Model(&User{}).First(&defaultUser).Error
 	if errors.Is(uerr, gorm.ErrRecordNotFound) {
 		db.Db.Create(&defaultUser)

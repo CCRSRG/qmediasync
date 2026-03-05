@@ -89,7 +89,7 @@ func RefreshOAuthAccessToken() {
 	now := time.Now().Unix()
 	for _, account := range accounts {
 		if account.RefreshToken == "" {
-			helpers.AppLogger.Infof("115账号 %d 没有刷新token，跳过", account.ID)
+			helpers.AppLogger.Infof("账号 %d 没有刷新token，跳过", account.ID)
 			continue
 		}
 		if account.SourceType == models.SourceType115 {
@@ -225,6 +225,13 @@ func StartScrapeRollbackCron() {
 
 }
 
+func InitTokenCron() {
+	GlobalCron.AddFunc("*/2 * * * *", func() {
+		// helpers.AppLogger.Info("定时刷新115的访问凭证")
+		RefreshOAuthAccessToken()
+	})
+}
+
 // 初始化定时任务
 func InitCron() {
 	if GlobalCron != nil {
@@ -243,10 +250,7 @@ func InitCron() {
 		// helpers.AppLogger.Info("清理过期的同步记录")
 		models.ClearExpiredSyncRecords(1) // 保留3天内的记录
 	})
-	GlobalCron.AddFunc("*/2 * * * *", func() {
-		// helpers.AppLogger.Info("定时刷新115的访问凭证")
-		RefreshOAuthAccessToken()
-	})
+
 	GlobalCron.AddFunc("*/13 * * * *", func() {
 		// helpers.AppLogger.Info("启动刮削任务")
 		startScrapeCron()

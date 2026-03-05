@@ -91,7 +91,7 @@ func stopAllTasks() error {
 
 func startAllTasks() error {
 	synccron.ResumeAllNewSyncQueues()
-	synccron.InitSyncCron()
+	synccron.InitCron()
 	synccron.InitSyncCron()
 	if models.GlobalDownloadQueue != nil {
 		models.GlobalDownloadQueue.Start()
@@ -163,6 +163,9 @@ func Backup(backupType string, reason string) error {
 	if err := backupToJsonFile(backupRecordDir, "Account", totalTable, &count, models.Account{}); err != nil {
 		return err
 	}
+	if err := backupToJsonFile(backupRecordDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
+		return err
+	}
 	if err := backupToJsonFile(backupRecordDir, "ApiKey", totalTable, &count, models.ApiKey{}); err != nil {
 		return err
 	}
@@ -184,17 +187,11 @@ func Backup(backupType string, reason string) error {
 	if err := backupToJsonFile(backupRecordDir, "SyncPath", totalTable, &count, models.SyncPath{}); err != nil {
 		return err
 	}
-	if err := backupToJsonFile(backupRecordDir, "SyncFile", totalTable, &count, models.SyncFile{}); err != nil {
-		return err
-	}
 	if err := backupToJsonFile(backupRecordDir, "ScrapeSettings", totalTable, &count, models.ScrapeSettings{}); err != nil {
 		return err
 	}
 
 	if err := backupToJsonFile(backupRecordDir, "ScrapePath", totalTable, &count, models.ScrapePath{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "ScrapeMediaFile", totalTable, &count, models.ScrapeMediaFile{}); err != nil {
 		return err
 	}
 	if err := backupToJsonFile(backupRecordDir, "ScrapePathCategory", totalTable, &count, models.ScrapePathCategory{}); err != nil {
@@ -204,15 +201,6 @@ func Backup(backupType string, reason string) error {
 		return err
 	}
 	if err := backupToJsonFile(backupRecordDir, "TvShowCategory", totalTable, &count, models.TvShowCategory{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "Media", totalTable, &count, models.Media{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MediaSeason", totalTable, &count, models.MediaSeason{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "MediaEpisode", totalTable, &count, models.MediaEpisode{}); err != nil {
 		return err
 	}
 	if err := backupToJsonFile(backupRecordDir, "ScrapeStrmPath", totalTable, &count, models.ScrapeStrmPath{}); err != nil {
@@ -225,12 +213,10 @@ func Backup(backupType string, reason string) error {
 	if err := backupToJsonFile(backupRecordDir, "EmbyLibrary", totalTable, &count, models.EmbyLibrary{}); err != nil {
 		return err
 	}
-	if err := backupToJsonFile(backupRecordDir, "EmbyMediaItem", totalTable, &count, models.EmbyMediaItem{}); err != nil {
-		return err
-	}
-	if err := backupToJsonFile(backupRecordDir, "EmbyMediaSyncFile", totalTable, &count, models.EmbyMediaSyncFile{}); err != nil {
-		return err
-	}
+	// if err := backupToJsonFile(backupRecordDir, "EmbyMediaItem", totalTable, &count, models.EmbyMediaItem{}); err != nil {
+	// 	return err
+	// }
+
 	if err := backupToJsonFile(backupRecordDir, "EmbyLibrarySyncPath", totalTable, &count, models.EmbyLibrarySyncPath{}); err != nil {
 		return err
 	}
@@ -270,8 +256,22 @@ func Backup(backupType string, reason string) error {
 	if err := backupToJsonFile(backupRecordDir, "SyncPathScrapePath", totalTable, &count, models.SyncPathScrapePath{}); err != nil {
 		return err
 	}
-
-	if err := backupToJsonFile(backupRecordDir, "Migrator", totalTable, &count, models.Migrator{}); err != nil {
+	if err := backupToJsonFile(backupRecordDir, "ScrapeMediaFile", totalTable, &count, models.ScrapeMediaFile{}); err != nil {
+		return err
+	}
+	if err := backupToJsonFile(backupRecordDir, "Media", totalTable, &count, models.Media{}); err != nil {
+		return err
+	}
+	if err := backupToJsonFile(backupRecordDir, "MediaSeason", totalTable, &count, models.MediaSeason{}); err != nil {
+		return err
+	}
+	if err := backupToJsonFile(backupRecordDir, "MediaEpisode", totalTable, &count, models.MediaEpisode{}); err != nil {
+		return err
+	}
+	if err := backupToJsonFile(backupRecordDir, "SyncFile", totalTable, &count, models.SyncFile{}); err != nil {
+		return err
+	}
+	if err := backupToJsonFile(backupRecordDir, "EmbyMediaSyncFile", totalTable, &count, models.EmbyMediaSyncFile{}); err != nil {
 		return err
 	}
 

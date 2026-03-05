@@ -454,8 +454,9 @@ func initOthers() {
 
 	// 启动同步任务队列管理器
 	synccron.InitNewSyncQueueManager()
-	synccron.InitCron()     // 初始化定时任务（包含备份定时任务）
-	synccron.InitSyncCron() // 初始化同步目录的定时任务
+	synccron.InitCron()      // 初始化定时任务（包含备份定时任务）
+	synccron.InitSyncCron()  // 初始化同步目录的定时任务
+	synccron.InitTokenCron() // 初始化定时刷新115的访问凭证
 	// 初始化备份服务
 	models.InitBackupService()
 	// 将所有刮削中和整理中的记录改为未执行
