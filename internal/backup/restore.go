@@ -52,7 +52,8 @@ func Restore(filePath string) error {
 	SetRunningResult("restore", "开始还原数据库", totalTable, count, "", true)
 	for _, table := range models.AllTables {
 		if err := restoreFromJsonFile(tempDir, helpers.GetStructName(table), totalTable, &count, table); err != nil {
-			return err
+			helpers.AppLogger.Warnf("恢复表 %s 失败: %v", helpers.GetStructName(table), err)
+			continue
 		}
 	}
 	helpers.AppLogger.Infof("完成恢复任务")
@@ -112,7 +113,7 @@ func restoreFromJsonFile[T any](backupDir string, modelName string, totalTable i
 			// helpers.AppLogger.Infof("%s 解析json成功: %d", modelName, restoredCount)
 		}
 		// 插入数据库
-		if err := db.Db.Save(&item).Error; err != nil {
+		if err := db.Db.Create(&item).Error; err != nil {
 			// return fmt.Errorf("插入数据库失败: %v", err)
 			helpers.AppLogger.Warnf("%s 插入数据库失败: %v", modelName, err)
 		} else {
