@@ -255,7 +255,7 @@ func GetBaiduPanUrlByPickCode(c *gin.Context) {
 			}
 			helpers.AppLogger.Infof("从接口中查询到百度网盘下载链接: %s => %s", pickCode, cachedUrl)
 			// 缓存8小时
-			db.Cache.Set(cacheKey, []byte(cachedUrl), 28800)
+			db.Cache.Set(cacheKey, []byte(cachedUrl), 27000)
 		} else {
 			helpers.AppLogger.Infof("从缓存中查询到百度网盘下载链接: %s => %s", pickCode, cachedUrl)
 		}

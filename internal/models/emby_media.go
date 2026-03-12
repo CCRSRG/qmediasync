@@ -606,7 +606,7 @@ func delete115Folders(client *v115open.OpenClient, delPath string, syncPathId ui
 		helpers.AppLogger.Errorf("删除网盘目录失败: 已到达根目录 %s", delPath)
 		return false, nil
 	}
-	pathParent := filepath.Dir(delPath)
+	pathParent := filepath.ToSlash(filepath.Dir(delPath))
 	pathParentId := ""
 	pathParentStr := ""
 	if pathParent == "" || pathParent == "." || pathParent == "/" {
