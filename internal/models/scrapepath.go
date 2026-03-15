@@ -88,6 +88,11 @@ type ScrapePath struct {
 	AiPrompt              string                       `json:"ai_prompt" form:"ai_prompt"`                               // AI识别提示词，用于自定义AI识别的元数据
 	ForceDeleteSourcePath bool                         `json:"force_delete_source_path" form:"force_delete_source_path"` // 是否强制删除源路径，开启时会强制删除源路径下的所有文件，包括子目录
 	EnableCron            bool                         `json:"enable_cron" form:"enable_cron"`                           // 是否启用定时任务，开启时会根据定时任务规则定时刮削
+	CronExpression        string                       `json:"cron_expression" form:"cron_expression"`                   // Cron 表达式（如：0 3 * * *）
+	CronDescription       string                       `json:"cron_description" form:"cron_description"`                 // Cron 表达式描述（如：每天 3 点）
+	LastCronRun           string                       `json:"last_cron_run" form:"last_cron_run"`                        // 上次执行时间
+	NextCronRun           string                       `json:"next_cron_run" form:"next_cron_run"`                        // 下次执行时间
+	CronEnabled           int                          `json:"cron_enabled" form:"cron_enabled"`                         // 定时任务启用状态（0/1）
 	EnableFanartTv        bool                         `json:"enable_fanart_tv" form:"enable_fanart_tv"`                 // 是否启用 fanart.tv，开启时会从 fanart.tv 下载高清图
 	IsScraping            bool                         `json:"is_scraping" form:"is_scraping"`                           // 是否正在刮削
 	MaxThreads            int                          `json:"max_threads" form:"max_threads"`                           // 刮削最大线程数，默认值为5
