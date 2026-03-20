@@ -64,7 +64,7 @@ type EmbyPlaybackItem struct {
 	Genres         []string `json:"Genres,omitempty"`        // 流派
 	Studios        []struct {
 		Name string `json:"Name"`
-		ID   string `json:"Id"`
+		ID   int64  `json:"Id"`
 	} `json:"Studios,omitempty"` // 制作公司
 	ImageTags      map[string]string `json:"ImageTags,omitempty"` // 图片标签
 }
