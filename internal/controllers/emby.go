@@ -719,8 +719,14 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) string {
 	var buf bytes.Buffer
 
+	// 媒体标题（包含年份信息）
+	mediaTitle := webhook.Item.Name
+	if webhook.Item.ProductionYear > 0 {
+		mediaTitle = fmt.Sprintf("%s (%d)", webhook.Item.Name, webhook.Item.ProductionYear)
+	}
+
 	buf.WriteString(fmt.Sprintf("用户：%s\n", webhook.UserName))
-	buf.WriteString(fmt.Sprintf("内容：%s - %s\n", webhook.GetMediaTypeName(), webhook.Item.Name))
+	buf.WriteString(fmt.Sprintf("内容：%s - %s\n", webhook.GetMediaTypeName(), mediaTitle))
 
 	// 如果是剧集，添加季集信息
 	if webhook.Item.Type == "Episode" {
@@ -730,9 +736,16 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 		}
 	}
 
-	// 添加原始标题
+	// 添加原始标题（如果与当前标题不同）
 	if webhook.Item.OriginalTitle != "" && webhook.Item.OriginalTitle != webhook.Item.Name {
 		buf.WriteString(fmt.Sprintf("原始标题：%s\n", webhook.Item.OriginalTitle))
+	}
+
+	// 添加首播日期（如果有）
+	if webhook.Item.PremiereDate != "" {
+		if parsedTime, err := time.Parse(time.RFC3339, webhook.Item.PremiereDate); err == nil {
+			buf.WriteString(fmt.Sprintf("首播日期：%s\n", parsedTime.Format("2006-01-02")))
+		}
 	}
 
 	// 添加设备信息
