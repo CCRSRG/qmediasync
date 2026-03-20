@@ -687,7 +687,7 @@ func handlePlaybackEvent(body []byte, event EmbyEvent) {
 // createPlaybackNotification 构造播放通知
 func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notification.Notification {
 	// 构造通知内容
-	title := fmt.Sprintf("%s %s", webhook.GetEventTypeEmoji(), webhook.GetEventTypeName())
+	title := fmt.Sprintf("%s %s %s ", webhook.GetEventTypeEmoji(), webhook.GetEventTypeName(), webhook.Item.Name)
 	content := formatPlaybackNotificationContent(webhook)
 
 	// 下载海报图片（如果有）
@@ -710,25 +710,10 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 	}
 
 	// 构造通知元数据
-	metadata := map[string]interface{}{
-		"user_id":     webhook.GetUserID(),
-		"user_name":   webhook.GetUserName(),
-		"media_type":  webhook.Item.Type,
-		"media_title": webhook.Item.Name,
-		"device_name": webhook.GetDeviceName(),
-		"client_name": webhook.GetClientName(),
-	}
-
-	if webhook.Item.Type == "Episode" {
-		metadata["series_name"] = webhook.Item.SeriesName
-		metadata["season_number"] = webhook.Item.SeasonNumber
-		metadata["episode_number"] = webhook.Item.EpisodeNumber
-	}
-
+	metadata := map[string]interface{}{}
 	playbackDuration := webhook.GetPlaybackDuration()
 	if playbackDuration > 0 {
-		metadata["playback_duration"] = playbackDuration
-		metadata["playback_duration_formatted"] = models.FormatPlaybackDuration(playbackDuration)
+		metadata["观看时长"] = models.FormatPlaybackDuration(playbackDuration)
 	}
 
 	notif := &notification.Notification{
@@ -752,10 +737,9 @@ func createPlaybackNotification(webhook *models.EmbyPlaybackWebhook) *notificati
 func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) string {
 	var buf bytes.Buffer
 
-	buf.WriteString(fmt.Sprintf("用户：%s\n", webhook.GetUserName()))
-	buf.WriteString(fmt.Sprintf("设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName()))
-	buf.WriteString(webhook.Item.Name)
+	fmt.Fprintf(&buf, "用户：%s\n", webhook.GetUserName())
+	fmt.Fprintf(&buf, "设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName())
+	// buf.WriteString(webhook.Item.Name)
 
 	return buf.String()
 }
-
