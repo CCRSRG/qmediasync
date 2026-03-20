@@ -7,11 +7,10 @@ import (
 
 // EmbyPlaybackWebhook Emby 播放事件 Webhook 消息结构
 type EmbyPlaybackWebhook struct {
-	Event string `json:"Event"` // playback.start/playback.pause/playback.stop
-	User  EmbyPlaybackUser
-	Item  EmbyPlaybackItem
-	Session EmbyPlaybackSession
-	Server  EmbyPlaybackServer
+	Event   string                 `json:"Event"`              // playback.start/playback.pause/playback.stop
+	User    EmbyPlaybackUser       `json:"User"`
+	Item    EmbyPlaybackItem       `json:"Item"`
+	Session EmbyPlaybackSession    `json:"Session"`
 }
 
 // EmbyPlaybackUser 播放用户信息
@@ -22,32 +21,21 @@ type EmbyPlaybackUser struct {
 
 // EmbyPlaybackSession 播放会话信息
 type EmbyPlaybackSession struct {
-	RemoteEndPoint      string            `json:"RemoteEndPoint"`
-	Client              string            `json:"Client"`
-	DeviceName          string            `json:"DeviceName"`
-	DeviceID            string            `json:"DeviceId"`
-	ApplicationVersion  string            `json:"ApplicationVersion"`
-	ID                  string            `json:"Id"`
-	PlaybackInfo        EmbyPlaybackInfo  `json:"PlaybackInfo"`
+	DeviceName   string             `json:"DeviceName"`
+	Client       string             `json:"Client"`
+	PlaybackInfo EmbyPlaybackInfo   `json:"PlaybackInfo"`
 }
 
 // EmbyPlaybackInfo 播放信息
 type EmbyPlaybackInfo struct {
-	PositionTicks   int64              `json:"PositionTicks"`     // 当前播放位置（单位：1/10000微秒）
-	PlaySessionId   string             `json:"PlaySessionId"`    // 播放会话ID
-	MediaSource     EmbyMediaSource    `json:"MediaSource"`
+	PositionTicks int64            `json:"PositionTicks"`   // 当前播放位置（单位：1/10000微秒）
+	PlaySessionId string           `json:"PlaySessionId"`  // 播放会话ID
+	MediaSource   EmbyMediaSource  `json:"MediaSource"`
 }
 
 // EmbyMediaSource 媒体源信息
 type EmbyMediaSource struct {
 	RunTimeTicks int64 `json:"RunTimeTicks"` // 总时长（单位：1/10000微秒）
-}
-
-// EmbyPlaybackServer Emby服务器信息
-type EmbyPlaybackServer struct {
-	Name    string `json:"Name"`
-	ID      string `json:"Id"`
-	Version string `json:"Version"`
 }
 
 // EmbyPlaybackItem Emby 播放媒体项信息
@@ -60,13 +48,6 @@ type EmbyPlaybackItem struct {
 	SeriesName     string `json:"SeriesName,omitempty"`     // 剧集名称
 	SeasonNumber   int    `json:"SeasonNumber,omitempty"`   // 季号（剧集）
 	EpisodeNumber  int    `json:"EpisodeNumber,omitempty"`  // 集号（剧集）
-	Overview       string `json:"Overview,omitempty"`       // 媒体简介
-	Genres         []string `json:"Genres,omitempty"`        // 流派
-	Studios        []struct {
-		Name string `json:"Name"`
-		ID   int64  `json:"Id"`
-	} `json:"Studios,omitempty"` // 制作公司
-	ImageTags      map[string]string `json:"ImageTags,omitempty"` // 图片标签
 }
 
 // GetUserID 获取用户ID
@@ -187,14 +168,4 @@ func (w *EmbyPlaybackWebhook) GetMediaTypeName() string {
 	default:
 		return "媒体"
 	}
-}
-
-// GetDeviceID 获取设备ID
-func (w *EmbyPlaybackWebhook) GetDeviceID() string {
-	return w.Session.DeviceID
-}
-
-// GetServerID 获取服务器ID
-func (w *EmbyPlaybackWebhook) GetServerID() string {
-	return w.Server.ID
 }
