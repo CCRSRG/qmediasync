@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flosch/pongo2/v5"
 	"gorm.io/gorm"
 )
 
@@ -581,11 +582,104 @@ func (sm *ScrapeMediaFile) FinishFromRenaming() {
 	sm.Save()
 }
 
+func (sm *ScrapeMediaFile) isNewTemplateSyntax(template string) bool {
+	hasIf := strings.Contains(template, "{% if")
+	hasVariable := strings.Contains(template, "{{") && strings.Contains(template, "}}")
+	return hasIf || hasVariable
+}
+
+func (sm *ScrapeMediaFile) buildTemplateContext() pongo2.Context {
+	ctx := pongo2.Context{
+		"title":       sm.Name,
+		"year":        sm.Year,
+		"tmdbid":      sm.TmdbId,
+		"videoFormat": sm.Resolution,
+		"edition":     sm.ResolutionLevel,
+		"fileExt":     sm.VideoExt,
+	}
+
+	if sm.Media != nil {
+		ctx["original_title"] = sm.Media.OriginalName
+		ctx["original_language"] = sm.Media.OriginalLanguage
+		ctx["imdbid"] = sm.Media.ImdbId
+		ctx["runtime"] = sm.Media.Runtime
+		ctx["overview"] = sm.Media.Overview
+		ctx["vote_average"] = sm.Media.VoteAverage
+
+		if sm.VideoCodec != nil {
+			ctx["videoCodec"] = sm.VideoCodec.Codec
+		}
+
+		if len(sm.AudioCodec) > 0 {
+			ctx["audioCodec"] = sm.AudioCodec[0].Codec
+		}
+
+		actorCount := len(sm.Media.Actors)
+		if actorCount >= 3 {
+			ctx["actors"] = "多人演员"
+		} else if actorCount > 1 {
+			actorNames := make([]string, 0)
+			for _, actor := range sm.Media.Actors {
+				actorNames = append(actorNames, actor.Name)
+			}
+			ctx["actors"] = strings.Join(actorNames, ", ")
+		} else if actorCount == 1 {
+			ctx["actors"] = sm.Media.Actors[0].Name
+		} else {
+			ctx["actors"] = ""
+		}
+
+		if sm.Media.Num != "" {
+			ctx["num"] = sm.Media.Num
+		}
+	}
+
+	if sm.MediaType == MediaTypeTvShow {
+		ctx["season"] = sm.SeasonNumber
+		ctx["episode"] = sm.EpisodeNumber
+
+		if sm.SeasonNumber >= 0 && sm.EpisodeNumber > 0 {
+			ctx["season_episode"] = fmt.Sprintf("S%02dE%02d", sm.SeasonNumber, sm.EpisodeNumber)
+		}
+
+		if sm.MediaEpisode != nil {
+			ctx["episode_title"] = sm.MediaEpisode.EpisodeName
+		}
+
+		if sm.MediaSeason != nil {
+			ctx["season_year"] = sm.MediaSeason.Year
+		} else if sm.MediaEpisode != nil {
+			ctx["season_year"] = sm.MediaEpisode.Year
+		}
+	}
+
+	return ctx
+}
+
+func (sm *ScrapeMediaFile) renderNewTemplate(template string) string {
+	ctx := sm.buildTemplateContext()
+	tpl, err := pongo2.FromString(template)
+	if err != nil {
+		helpers.AppLogger.Errorf("新模板解析失败: %v", err)
+		return ""
+	}
+	out, err := tpl.Execute(ctx)
+	if err != nil {
+		helpers.AppLogger.Errorf("新模板渲染失败: %v", err)
+		return ""
+	}
+	return out
+}
+
 func (sm *ScrapeMediaFile) GenerateNameByTemplate(template string) string {
 	if template == "" {
-		// 替换占位符
 		template = "{title} ({year})"
 	}
+
+	if sm.isNewTemplateSyntax(template) {
+		return sm.renderNewTemplate(template)
+	}
+
 	newName := strings.ReplaceAll(template, "{title}", sm.Name)
 	newName = strings.ReplaceAll(newName, "{year}", strconv.Itoa(sm.Year))
 	if sm.Resolution != "" {
