@@ -69,6 +69,35 @@ type EmbyPlaybackItem struct {
 	ImageTags      map[string]string `json:"ImageTags,omitempty"` // 图片标签
 }
 
+// GetUserID 获取用户ID
+func (w *EmbyPlaybackWebhook) GetUserID() string {
+	return w.User.ID
+}
+
+// GetUserName 获取用户名
+func (w *EmbyPlaybackWebhook) GetUserName() string {
+	return w.User.Name
+}
+
+// GetDeviceName 获取设备名称
+func (w *EmbyPlaybackWebhook) GetDeviceName() string {
+	return w.Session.DeviceName
+}
+
+// GetClientName 获取客户端名称
+func (w *EmbyPlaybackWebhook) GetClientName() string {
+	return w.Session.Client
+}
+
+// GetPlaybackDuration 获取播放时长（毫秒，仅Stop事件）
+func (w *EmbyPlaybackWebhook) GetPlaybackDuration() int64 {
+	if w.Event != "playback.stop" {
+		return 0
+	}
+	// 将PositionTicks转换为毫秒（1 Tick = 100纳秒）
+	return w.Session.PlaybackInfo.PositionTicks / 10000
+}
+
 // GetSeasonEpisodeString 获取季集信息字符串（如 "S01E06"）
 func (i *EmbyPlaybackItem) GetSeasonEpisodeString() string {
 	if i.Type != "Episode" {

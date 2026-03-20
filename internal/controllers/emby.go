@@ -752,10 +752,19 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 	// 添加设备信息
 	buf.WriteString(fmt.Sprintf("设备：%s (%s)\n", webhook.GetDeviceName(), webhook.GetClientName()))
 
-	// 如果是停止事件，添加播放时长
-	playbackDuration := webhook.GetPlaybackDuration()
-	if webhook.Event == "playback.stop" && playbackDuration > 0 {
-		buf.WriteString(fmt.Sprintf("时长：%s", models.FormatPlaybackDuration(playbackDuration)))
+	// 如果是停止事件，添加播放时长和进度
+	if webhook.Event == "playback.stop" {
+		playbackDuration := webhook.GetPlaybackDuration()
+		if playbackDuration > 0 {
+			durationStr := models.FormatPlaybackDuration(playbackDuration)
+			buf.WriteString(fmt.Sprintf("时长：%s", durationStr))
+
+			// 计算播放进度百分比
+			if webhook.Session.PlaybackInfo.MediaSource.RunTimeTicks > 0 {
+				progress := float64(webhook.Session.PlaybackInfo.PositionTicks) / float64(webhook.Session.PlaybackInfo.MediaSource.RunTimeTicks) * 100
+				buf.WriteString(fmt.Sprintf("（%.1f%%）", progress))
+			}
+		}
 	}
 
 	return buf.String()
