@@ -227,8 +227,8 @@ func Webhook(ctx *gin.Context) {
 			}
 		}
 	}
-	// 处理播放事件（Playback.Start、Playback.Pause、Playback.Stop）
-	if event.Event == "Playback.Start" || event.Event == "Playback.Pause" || event.Event == "Playback.Stop" {
+	// 处理播放事件（playback.start、playback.pause、playback.stop）
+	if event.Event == "playback.start" || event.Event == "playback.pause" || event.Event == "playback.stop" {
 		go handlePlaybackEvent(body, event)
 	}
 
