@@ -173,7 +173,7 @@ func (c *Client) GetAllMediaLibraries() ([]EmbyLibrary, error) {
 
 // GetMediaItemsByLibraryID 从指定的媒体库中检索所有媒体项目。
 // 它会自动处理分页并为每个项目请求详细字段。
-func (c *Client) GetMediaItemsByLibraryID(libraryID string, lastItemId string) ([]BaseItemDtoV2, error) {
+func (c *Client) GetMediaItemsByLibraryID(libraryID string, lastDateCreatedTime int64) ([]BaseItemDtoV2, error) {
 	const (
 		limit  = 100 // 每次请求获取的项目数
 		fields = "DateCreated,DateModified,ParentId,PremiereDate,MediaStreams"
@@ -238,8 +238,14 @@ mainloop:
 		}
 		for _, item := range response.Items {
 			// helpers.AppLogger.Debugf("处理项目 %+v", item)
-			if item.Id == lastItemId {
-				helpers.AppLogger.Infof("找到最后一个项目 %s", lastItemId)
+			var dateCreatedTime int64 = 0
+			if item.DateCreated != "" {
+				if t, err := time.Parse(time.RFC3339, item.DateCreated); err == nil {
+					dateCreatedTime = t.Unix()
+				}
+			}
+			if dateCreatedTime == lastDateCreatedTime {
+				helpers.AppLogger.Infof("找到最后一个项目 %s =>%d", item.Id, lastDateCreatedTime)
 				break mainloop
 			} else {
 				allItems = append(allItems, item)
@@ -551,7 +557,7 @@ func ProcessLibraries(embyURL, apiKey string, excludeIds []string) []map[string]
 			continue
 		}
 
-		items, err := client.GetMediaItemsByLibraryID(lib.ID, "")
+		items, err := client.GetMediaItemsByLibraryID(lib.ID, 0)
 		if err != nil {
 			helpers.AppLogger.Errorf("获取媒体库 '%s' 中的项目失败: %v", lib.Name, err)
 			continue // 继续处理下一个媒体库

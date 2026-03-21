@@ -755,11 +755,11 @@ func deleteBaiduPanFiles(client *baidupan.Client, syncFile SyncFile, metaFiles [
 	return true, nil
 }
 
-func GetLastItemIdByLibraryID(libraryID string) string {
+func GetLastItemDateCreatedTimeByLibraryID(libraryID string) int64 {
 	var lastItem EmbyMediaItem
 	if err := db.Db.Where("library_id = ?", libraryID).Order("item_id_int DESC").First(&lastItem).Error; err != nil {
 		helpers.AppLogger.Errorf("查询媒体库 %s 最后一个项目失败：%v", libraryID, err)
 	}
-	helpers.AppLogger.Infof("查询媒体库 %s 最后一个项目成功：%s", libraryID, lastItem.ItemId)
-	return lastItem.ItemId
+	helpers.AppLogger.Infof("查询媒体库 %s 最后一个项目成功：%d => %d", libraryID, lastItem.ItemIdInt, lastItem.DateCreatedTime)
+	return lastItem.DateCreatedTime
 }

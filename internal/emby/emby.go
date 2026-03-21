@@ -156,7 +156,7 @@ func PerformEmbySync() (int, error) {
 	}
 
 	for _, lib := range libs {
-		items, gerr := client.GetMediaItemsByLibraryID(lib.ID, "")
+		items, gerr := client.GetMediaItemsByLibraryID(lib.ID, 0)
 		if gerr != nil {
 			helpers.AppLogger.Warnf("获取媒体库%s失败: %v", lib.Name, gerr)
 			continue
@@ -216,8 +216,8 @@ func IncrementalSyncEmbyMediaItems(itemId string) error {
 		return errors.New("没有找到可访问的媒体库")
 	}
 	for _, lib := range librarys {
-		lastItemId := models.GetLastItemIdByLibraryID(lib.ID)
-		items, gerr := client.GetMediaItemsByLibraryID(lib.ID, lastItemId)
+		lastDateCreatedTime := models.GetLastItemDateCreatedTimeByLibraryID(lib.ID)
+		items, gerr := client.GetMediaItemsByLibraryID(lib.ID, lastDateCreatedTime)
 		if gerr != nil {
 			helpers.AppLogger.Warnf("获取媒体库%s失败: %v", lib.ID, gerr)
 			continue
