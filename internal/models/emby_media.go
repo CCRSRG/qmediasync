@@ -19,6 +19,7 @@ import (
 type EmbyMediaItem struct {
 	BaseModel
 	ItemId            string `json:"item_id" gorm:"uniqueIndex:idx_emby_item_id"`
+	ItemIdInt         int64  `json:"item_id_int" gorm:"index:idx_emby_item_id_int"`
 	ServerId          string `json:"server_id" gorm:"index:idx_emby_server_id"`
 	Name              string `json:"name"`
 	Type              string `json:"type" gorm:"index:idx_emby_type"`
@@ -36,7 +37,9 @@ type EmbyMediaItem struct {
 	ProductionYear    int    `json:"production_year"`
 	PremiereDate      string `json:"premiere_date"`
 	DateCreated       string `json:"date_created"`
+	DateCreatedTime   int64  `json:"date_created_time" gorm:"index:idx_emby_date_created_time"`
 	DateModified      string `json:"date_modified"`
+	DateModifiedTime  int64  `json:"date_modified_time"`
 	IsFolder          bool   `json:"is_folder"`
 }
 
@@ -750,4 +753,13 @@ func deleteBaiduPanFiles(client *baidupan.Client, syncFile SyncFile, metaFiles [
 		return false, err
 	}
 	return true, nil
+}
+
+func GetLastItemIdByLibraryID(libraryID string) string {
+	var lastItem EmbyMediaItem
+	if err := db.Db.Where("library_id = ?", libraryID).Order("item_id_int DESC").First(&lastItem).Error; err != nil {
+		helpers.AppLogger.Errorf("查询媒体库 %s 最后一个项目失败：%v", libraryID, err)
+	}
+	helpers.AppLogger.Infof("查询媒体库 %s 最后一个项目成功：%s", libraryID, lastItem.ItemId)
+	return lastItem.ItemId
 }

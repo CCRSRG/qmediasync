@@ -18,7 +18,7 @@ type Migrator struct {
 	VersionCode int `json:"version_code"` // 版本号
 }
 
-var MaxVersionCode = 34
+var MaxVersionCode = 35
 var AllTables = []any{
 	BackupConfig{}, BackupRecord{},
 	ApiKey{}, Settings{}, Sync{}, User{}, Account{},
@@ -385,6 +385,42 @@ func Migrate() {
 	if migrator.VersionCode == 33 {
 		// 为已有渠道添加新的播放通知类型规则（PlaybackStart、PlaybackPause、PlaybackStop）
 		addPlaybackNotificationRulesForExistingChannels(db.Db)
+		migrator.UpdateVersionCode(db.Db)
+	}
+	if migrator.VersionCode == 34 {
+		// 给EmbyMediaItem表添加ItemIdInt字段
+		db.Db.AutoMigrate(EmbyMediaItem{})
+		// 更新所有item_id_int字段
+		// 每次取100个
+		var items []*EmbyMediaItem
+		page := 1
+		helpers.AppLogger.Infof("开始更新EmbyMediaItem item_id_int字段")
+		for {
+			if err := db.Db.Model(EmbyMediaItem{}).Limit(100).Offset((page - 1) * 100).Order("id ASC").Select("id, item_id, item_id_int").Find(&items).Error; err != nil {
+				helpers.AppLogger.Errorf("查询EmbyMediaItem item_id_int字段失败: %v", err)
+			}
+			if len(items) == 0 {
+				helpers.AppLogger.Warnf("查询EmbyMediaItem item_id字段 %d 条", len(items))
+				break
+			}
+			// 更新item_id_int字段
+			for _, item := range items {
+				if item.ItemIdInt != 0 {
+					continue
+				}
+				itemIdInt := helpers.StringToInt64(item.ItemId)
+				if err := db.Db.Model(EmbyMediaItem{}).Where("id = ?", item.ID).Update("item_id_int", itemIdInt).Error; err != nil {
+					helpers.AppLogger.Errorf("更新EmbyMediaItem item_id_int字段 \"%s\" => %d 失败: %v", item.ItemId, itemIdInt, err)
+				} else {
+					helpers.AppLogger.Infof("更新EmbyMediaItem item_id_int字段 \"%s\" => %d 成功", item.ItemId, itemIdInt)
+				}
+			}
+			if len(items) < 100 {
+				break
+			}
+			page++
+		}
+		helpers.AppLogger.Infof("更新EmbyMediaItem item_id_int字段完成")
 		migrator.UpdateVersionCode(db.Db)
 	}
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)

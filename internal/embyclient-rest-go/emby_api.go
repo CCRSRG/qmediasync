@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 )
 
@@ -103,6 +104,27 @@ type QueryResultBaseItemDto struct {
 	TotalRecordCount int32           `json:"TotalRecordCount,omitempty"`
 }
 
+type AncestorDto struct {
+	ID       string `json:"Id,omitempty"`
+	Name     string `json:"Name,omitempty"`
+	Path     string `json:"Path,omitempty"`
+	FileName string `json:"FileName,omitempty"`
+	IsFolder bool   `json:"IsFolder,omitempty"`
+	ParentId string `json:"ParentId,omitempty"`
+	Type     string `json:"Type,omitempty"`
+}
+
+type VirtualFolderDto struct {
+	ID                 string   `json:"Id,omitempty"`
+	ItemId             string   `json:"ItemId,omitempty"`
+	Guid               string   `json:"Guid,omitempty"`
+	PrimaryImageItemId string   `json:"PrimaryImageItemId,omitempty"`
+	PrimaryImageTag    string   `json:"PrimaryImageTag,omitempty"`
+	Name               string   `json:"Name,omitempty"`
+	CollectionType     string   `json:"CollectionType,omitempty"`
+	Locations          []string `json:"Locations,omitempty"`
+}
+
 // GetAllMediaLibraries 从 Emby 服务器检索所有媒体库。
 func (c *Client) GetAllMediaLibraries() ([]EmbyLibrary, error) {
 	// 构造请求 URL
@@ -151,10 +173,10 @@ func (c *Client) GetAllMediaLibraries() ([]EmbyLibrary, error) {
 
 // GetMediaItemsByLibraryID 从指定的媒体库中检索所有媒体项目。
 // 它会自动处理分页并为每个项目请求详细字段。
-func (c *Client) GetMediaItemsByLibraryID(libraryID string) ([]BaseItemDtoV2, error) {
+func (c *Client) GetMediaItemsByLibraryID(libraryID string, lastItemId string) ([]BaseItemDtoV2, error) {
 	const (
 		limit  = 100 // 每次请求获取的项目数
-		fields = "MediaStreams"
+		fields = "DateCreated,DateModified,ParentId,PremiereDate,MediaStreams"
 	)
 
 	var allItems []BaseItemDtoV2
@@ -167,6 +189,7 @@ func (c *Client) GetMediaItemsByLibraryID(libraryID string) ([]BaseItemDtoV2, er
 		return nil, fmt.Errorf("解析基础 URL 时出错: %w", err)
 	}
 
+mainloop:
 	for {
 		// 设置查询参数
 		params := url.Values{}
@@ -213,8 +236,17 @@ func (c *Client) GetMediaItemsByLibraryID(libraryID string) ([]BaseItemDtoV2, er
 			}
 			firstRequest = false
 		}
+		for _, item := range response.Items {
+			// helpers.AppLogger.Debugf("处理项目 %+v", item)
+			if item.Id == lastItemId {
+				helpers.AppLogger.Infof("找到最后一个项目 %s", lastItemId)
+				break mainloop
+			} else {
+				allItems = append(allItems, item)
+			}
+		}
 
-		allItems = append(allItems, response.Items...)
+		// allItems = append(allItems, response.Items...)
 
 		// 检查是否已获取所有项目
 		if len(response.Items) == 0 || len(allItems) >= int(response.TotalRecordCount) {
@@ -372,6 +404,114 @@ func (c *Client) GetItemDetailByUser(itemId string, userID string) (*BaseItemDto
 	return &response, nil
 }
 
+// 通过item id 查询所属的 媒体库id，返回数组
+// 先查询item的Ancestors获取item所属的文件夹id，取倒数第二个文件夹路径做为顶层文件夹路径
+// 再查询/Library/VirtualFolders获取顶层文件夹路径对应的媒体库id
+func (c *Client) GetItemLibraryId(itemId string) ([]VirtualFolderDto, error) {
+	ancestors, err := c.GetItemAncestors(itemId)
+	if err != nil {
+		return nil, err
+	}
+	// 提取倒数第二个文件夹路径做顶层文件夹路径
+	libraryFolderDto := ancestors[len(ancestors)-2]
+	libraryPath := libraryFolderDto.Path
+	// 查询顶层文件夹路径对应的媒体库id
+	virtualFolders, err := c.GetLibraryVirtualFolders()
+	if err != nil {
+		return nil, err
+	}
+	// 提取所有媒体库id
+	var librarys []VirtualFolderDto
+	for _, virtualFolder := range virtualFolders {
+		if slices.Contains(virtualFolder.Locations, libraryPath) {
+			librarys = append(librarys, virtualFolder)
+			continue
+		}
+	}
+	return librarys, nil
+}
+
+func (c *Client) GetItemAncestors(itemId string) ([]AncestorDto, error) {
+	// Construct the request URL
+	url := fmt.Sprintf("%s/emby/Items/%s/Ancestors?api_key=%s", c.embyURL, itemId, c.apiKey)
+
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建请求时出错: %w", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Accept", "application/json")
+
+	// Send the request
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("发送请求时出错: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("错误: 收到非 200 状态码: %d", resp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体时出错: %w", err)
+	}
+
+	// Parse the JSON response
+	var ancestors []AncestorDto
+	if err := json.Unmarshal(body, &ancestors); err != nil {
+		return nil, fmt.Errorf("解析 json 时出错: %w", err)
+	}
+	// 提取所有文件夹id
+	return ancestors, nil
+}
+
+// 获取所有媒体库的详情包括文件夹
+func (c *Client) GetLibraryVirtualFolders() ([]VirtualFolderDto, error) {
+	// Construct the request URL
+	url := fmt.Sprintf("%s/emby/Library/VirtualFolders?api_key=%s", c.embyURL, c.apiKey)
+
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("创建请求时出错: %w", err)
+	}
+
+	// Set request headers
+	req.Header.Set("Accept", "application/json")
+
+	// Send the request
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("发送请求时出错: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("错误: 收到非 200 状态码: %d", resp.StatusCode)
+	}
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("读取响应体时出错: %w", err)
+	}
+
+	// Parse the JSON response
+	var virtualFolders []VirtualFolderDto
+	if err := json.Unmarshal(body, &virtualFolders); err != nil {
+		return nil, fmt.Errorf("解析 json 时出错: %w", err)
+	}
+
+	return virtualFolders, nil
+}
+
 // 刷新所有媒体库媒体流数据
 func ProcessLibraries(embyURL, apiKey string, excludeIds []string) []map[string]string {
 	// 创建一个新的 Emby 客户端
@@ -411,7 +551,7 @@ func ProcessLibraries(embyURL, apiKey string, excludeIds []string) []map[string]
 			continue
 		}
 
-		items, err := client.GetMediaItemsByLibraryID(lib.ID)
+		items, err := client.GetMediaItemsByLibraryID(lib.ID, "")
 		if err != nil {
 			helpers.AppLogger.Errorf("获取媒体库 '%s' 中的项目失败: %v", lib.Name, err)
 			continue // 继续处理下一个媒体库
