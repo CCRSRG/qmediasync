@@ -361,7 +361,7 @@ func GetOAuthUrl(c *gin.Context) {
 		return
 	}
 	clientId := account.AppId
-	if clientId != "Q115-STRM" && clientId != "MQ的媒体库" || clientId != "QMediaSync" {
+	if clientId != "Q115-STRM" && clientId != "MQ的媒体库" && clientId != "QMediaSync" {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "自定义的APPID无法授权", Data: nil})
 		return
 	}
