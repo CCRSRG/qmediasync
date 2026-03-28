@@ -135,9 +135,15 @@ func (r *RenameOpenList) move(mediaFile *models.ScrapeMediaFile, newName, newPat
 					helpers.AppLogger.Errorf("OpenList改名字幕文件失败: %v", err)
 				} else {
 					helpers.AppLogger.Infof("字幕文件 %s 重命名成功：%s", newPathId+"/"+sub.FileName, newSubName)
-					mediaFile.Media.SubtitleFiles[idx].FileName = newSubName
-					mediaFile.Media.SubtitleFiles[idx].FileId = filepath.Join(newPathId, newSubName)
-					mediaFile.Media.SubtitleFiles[idx].PickCode = filepath.Join(newPathId, newSubName)
+					if mediaFile.MediaType != models.MediaTypeTvShow {
+						mediaFile.Media.SubtitleFiles[idx].FileName = newSubName
+						mediaFile.Media.SubtitleFiles[idx].FileId = filepath.Join(newPathId, newSubName)
+						mediaFile.Media.SubtitleFiles[idx].PickCode = filepath.Join(newPathId, newSubName)
+					} else {
+						mediaFile.MediaEpisode.SubtitleFiles[idx].FileName = newSubName
+						mediaFile.MediaEpisode.SubtitleFiles[idx].FileId = filepath.Join(newPathId, newSubName)
+						mediaFile.MediaEpisode.SubtitleFiles[idx].PickCode = filepath.Join(newPathId, newSubName)
+					}
 				}
 			}
 		}
