@@ -61,11 +61,15 @@ var currentUpdateInfo *updateInfo
 // @Security ApiKeyAuth
 func GetLastRelease(c *gin.Context) {
 	force := c.Query("force")
+	channel := c.Query("channel")
+	if channel == "" {
+		channel = "github"
+	}
 	passCache := false
 	if force == "1" {
 		passCache = true
 	}
-	releases := listReleases(passCache)
+	releases := listReleases(passCache, channel)
 	if releases == nil {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "获取最新版本失败", Data: nil})
 		return
@@ -92,6 +96,7 @@ func UpdateToVersion(c *gin.Context) {
 	}
 	type UpdateVersionRequest struct {
 		Version string `json:"version"`
+		Channel string `json:"channel"`
 	}
 	var req UpdateVersionRequest
 	if perr := c.ShouldBindJSON(&req); perr != nil {
@@ -99,26 +104,46 @@ func UpdateToVersion(c *gin.Context) {
 		return
 	}
 	version := req.Version
+	channel := req.Channel
 	if version == "" {
 		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "版本号不能为空", Data: nil})
 		return
 	}
-	// 查询版本信息，然后下载压缩包
-	updater := updater.NewGitHubUpdater("qicfan", "qmediasync", helpers.Version)
-	downloadURL, _, _, err := updater.GetReleaseDownloadURL(version)
-	if err != nil {
-		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "版本不存在", Data: nil})
-		return
+	if channel == "" {
+		channel = "github"
 	}
-	// 测试downloadUrl是否可以连通
-	// 先测试链接是否可用
-	connType, proxyUrl := helpers.TestGithub(downloadURL, models.SettingsGlobal.HttpProxy)
-	if connType == github.ConnectionTypeFailed {
-		c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "无法连通github，也没有设置代理，无法升级", Data: nil})
-		return
-	}
-	if connType == github.ConnectionTypeGitHubProxy {
-		downloadURL = proxyUrl
+
+	var downloadURL string
+	var err error
+	var connType github.ConnectionType
+	var httpProxy string
+
+	if channel == "gitee" {
+		giteeUpdater := updater.NewGiteeUpdater("qicfan", "qmediasync", helpers.Version)
+		downloadURL, _, _, err = giteeUpdater.GetReleaseDownloadURL(version)
+		if err != nil {
+			c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "版本不存在", Data: nil})
+			return
+		}
+	} else {
+		ghUpdater := updater.NewGitHubUpdater("qicfan", "qmediasync", helpers.Version)
+		downloadURL, _, _, err = ghUpdater.GetReleaseDownloadURL(version)
+		if err != nil {
+			c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "版本不存在", Data: nil})
+			return
+		}
+		var proxyUrl string
+		connType, proxyUrl = helpers.TestGithub(downloadURL, models.SettingsGlobal.HttpProxy)
+		if connType == github.ConnectionTypeFailed {
+			c.JSON(http.StatusOK, APIResponse[any]{Code: BadRequest, Message: "无法连通github，也没有设置代理，无法升级", Data: nil})
+			return
+		}
+		if connType == github.ConnectionTypeGitHubProxy {
+			downloadURL = proxyUrl
+		}
+		if connType == github.ConnectionTypeProxy {
+			httpProxy = models.SettingsGlobal.HttpProxy
+		}
 	}
 	currentUpdateInfo = &updateInfo{
 		Version:     version,
@@ -144,10 +169,6 @@ func UpdateToVersion(c *gin.Context) {
 		updateFilename := filepath.Join(updateFilePath, filename)
 		if helpers.PathExists(updateFilename) {
 			os.Remove(updateFilename)
-		}
-		httpProxy := ""
-		if connType == github.ConnectionTypeProxy {
-			httpProxy = models.SettingsGlobal.HttpProxy
 		}
 		// 下载文件
 		err := helpers.DownloadFileWithProgress(currentUpdateInfo.ctx, httpProxy, currentUpdateInfo.DownloadURL, updateFilename, v115open.DEFAULTUA, func(progress int64, total int64) {
@@ -359,12 +380,16 @@ func CancelUpdate(c *gin.Context) {
 }
 
 // listReleases 列出最新版本
-func listReleases(passCache bool) []version {
+func listReleases(passCache bool, channel string) []version {
+	cacheKey := "latest_releases"
+	if channel == "gitee" {
+		cacheKey = "latest_releases_gitee"
+	}
 	// 直接读取缓存
 	if !passCache {
-		cached := db.Cache.Get("latest_releases")
+		cached := db.Cache.Get(cacheKey)
 		if cached != nil {
-			helpers.AppLogger.Infof("使用缓存的最新版本列表")
+			helpers.AppLogger.Infof("使用缓存的最新版本列表 (channel: %s)", channel)
 			var versionList []version
 			err := json.Unmarshal(cached, &versionList)
 			if err == nil {
@@ -374,13 +399,26 @@ func listReleases(passCache bool) []version {
 			}
 		}
 	}
-	updater := updater.NewGitHubUpdater("qicfan", "qmediasync", helpers.Version)
-	updater.IncludePreRelease = false
 
-	releases, err := updater.GetLatestStableReleases(5)
-	if err != nil {
-		helpers.AppLogger.Errorf("查找Github最新版本失败: %v", err)
-		return nil
+	var releases []updater.ReleaseInfo
+	var err error
+
+	if channel == "gitee" {
+		giteeUpdater := updater.NewGiteeUpdater("qicfan", "qmediasync", helpers.Version)
+		giteeUpdater.IncludePreRelease = false
+		releases, err = giteeUpdater.GetLatestStableReleases(5)
+		if err != nil {
+			helpers.AppLogger.Errorf("查找Gitee最新版本失败: %v", err)
+			return nil
+		}
+	} else {
+		ghUpdater := updater.NewGitHubUpdater("qicfan", "qmediasync", helpers.Version)
+		ghUpdater.IncludePreRelease = false
+		releases, err = ghUpdater.GetLatestStableReleases(5)
+		if err != nil {
+			helpers.AppLogger.Errorf("查找Github最新版本失败: %v", err)
+			return nil
+		}
 	}
 
 	if len(releases) == 0 {
@@ -388,8 +426,7 @@ func listReleases(passCache bool) []version {
 		return nil
 	}
 
-	helpers.AppLogger.Infof("找到  %s/%s 的 %d 个最新版本", "qicfan", "qmediasync", len(releases))
-	// helpers.AppLogger.Infof("==============================================")
+	helpers.AppLogger.Infof("找到 %s/%s 的 %d 个最新版本 (channel: %s)", "qicfan", "qmediasync", len(releases), channel)
 	versionList := make([]version, 0)
 	for i, release := range releases {
 		versionList = append(versionList, version{
@@ -404,7 +441,7 @@ func listReleases(passCache bool) []version {
 	// 缓存1小时
 	versionListStr, _ := json.Marshal(versionList)
 	if versionListStr != nil {
-		db.Cache.Set("latest_releases", versionListStr, 3600)
+		db.Cache.Set(cacheKey, versionListStr, 3600)
 	}
 	return versionList
 }
