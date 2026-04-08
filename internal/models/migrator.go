@@ -384,7 +384,7 @@ func Migrate() {
 	}
 	if migrator.VersionCode == 33 {
 		// 为已有渠道添加新的播放通知类型规则（PlaybackStart、PlaybackPause、PlaybackStop）
-		addPlaybackNotificationRulesForExistingChannels(db.Db)
+		addNewNotificationRulesForExistingChannels(db.Db)
 		migrator.UpdateVersionCode(db.Db)
 	}
 	if migrator.VersionCode == 34 {
@@ -460,6 +460,13 @@ func Migrate() {
 		// 添加播放通知剧情简介和播放进度开关到emby_config表
 		db.Db.AutoMigrate(EmbyConfig{})
 		helpers.AppLogger.Info("已添加enable_playback_overview和enable_playback_progress字段到emby_config表")
+		migrator.UpdateVersionCode(db.Db)
+	}
+
+	if migrator.VersionCode == 38 {
+		// 添加刮削失败通知类型到emby_config表
+		addNewNotificationRulesForExistingChannels(db.Db)
+		helpers.AppLogger.Info("已添加刮削整理失败通知类型")
 		migrator.UpdateVersionCode(db.Db)
 	}
 	helpers.AppLogger.Infof("当前数据库版本 %d", migrator.VersionCode)
@@ -819,13 +826,14 @@ func migrateExistingNotificationSettings(dbConn *gorm.DB) {
 	}
 }
 
-// addPlaybackNotificationRulesForExistingChannels 为已有渠道添加新的播放通知类型规则
-func addPlaybackNotificationRulesForExistingChannels(dbConn *gorm.DB) {
+// addNewNotificationRulesForExistingChannels 为已有渠道添加新的播放通知类型规则
+func addNewNotificationRulesForExistingChannels(dbConn *gorm.DB) {
 	// 新增的播放通知类型
 	newPlaybackTypes := []notification.NotificationType{
 		notification.PlaybackStart,
 		notification.PlaybackPause,
 		notification.PlaybackStop,
+		notification.ScrapeError,
 	}
 
 	// 获取所有已有的通知渠道

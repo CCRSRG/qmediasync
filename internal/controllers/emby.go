@@ -747,6 +747,7 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 
 	// 播放进度
 	if models.GlobalEmbyConfig != nil && models.GlobalEmbyConfig.EnablePlaybackProgress == 1 {
+		helpers.AppLogger.Infof("通知中需要显示播放进度")
 		positionTicks := webhook.PlaybackInfo.PositionTicks
 		runtimeTicks := webhook.PlaybackInfo.MediaSource.RunTimeTicks
 		if positionTicks > 0 && runtimeTicks > 0 {
@@ -754,11 +755,17 @@ func formatPlaybackNotificationContent(webhook *models.EmbyPlaybackWebhook) stri
 			runtimeStr := formatTicksToTime(runtimeTicks)
 			percentage := float64(positionTicks) / float64(runtimeTicks) * 100
 			fmt.Fprintf(&buf, "播放进度：%s / %s (%.0f%%)\n", positionStr, runtimeStr, percentage)
+			helpers.AppLogger.Infof("通知中需要显示播放进度 %s / %s (%.0f%%)", positionStr, runtimeStr, percentage)
 		} else if runtimeTicks > 0 {
 			// start事件没有position，显示总时长
 			runtimeStr := formatTicksToTime(runtimeTicks)
 			fmt.Fprintf(&buf, "时长：%s\n", runtimeStr)
+			helpers.AppLogger.Infof("通知中需要显示时长 %s", runtimeStr)
+		} else {
+			helpers.AppLogger.Infof("无法显示播放进度，因为 positionTicks 或 runtimeTicks 为 0 %s", webhook.Item.ID)
 		}
+	} else {
+		helpers.AppLogger.Infof("通知中不需要显示播放进度")
 	}
 
 	// 剧情简介
