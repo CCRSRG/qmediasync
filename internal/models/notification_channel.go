@@ -29,6 +29,7 @@ const (
 	SyncFinished   NotificationType = notification.SyncFinished
 	SyncError      NotificationType = notification.SyncError
 	ScrapeFinished NotificationType = notification.ScrapeFinished
+	ScrapeError    NotificationType = notification.ScrapeError
 	SystemAlert    NotificationType = notification.SystemAlert
 	MediaAdded     NotificationType = notification.MediaAdded
 	MediaRemoved   NotificationType = notification.MediaRemoved

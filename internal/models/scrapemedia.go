@@ -3,7 +3,9 @@ package models
 import (
 	"Q115-STRM/internal/db"
 	"Q115-STRM/internal/helpers"
+	"Q115-STRM/internal/notificationmanager"
 	"Q115-STRM/internal/tmdb"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -362,6 +364,19 @@ func (sm *ScrapeMediaFile) Failed(reason string) {
 	if err := db.Db.Model(&ScrapeMediaFile{}).Where("id = ?", sm.ID).Updates(updateData).Error; err != nil {
 		helpers.AppLogger.Errorf("更新刮削媒体失败: id=%d %v", sm.ID, err)
 	}
+	ctx := context.Background()
+	notif := &Notification{
+		Type:      ScrapeError,
+		Title:     fmt.Sprintf("❌ %s 刮削失败", sm.Name),
+		Content:   fmt.Sprintf("失败原因: %s\n⏰ 时间: %s", sm.FailedReason, time.Now().Format("2006-01-02 15:04:05")),
+		Timestamp: time.Now(),
+		Priority:  NormalPriority,
+	}
+	if notificationmanager.GlobalEnhancedNotificationManager != nil {
+		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(ctx, notif); err != nil {
+			helpers.AppLogger.Errorf("发送电影或电视剧刮削失败通知失败: %v", err)
+		}
+	}
 }
 
 // 状态改为已识别
@@ -458,6 +473,19 @@ func (sm *ScrapeMediaFile) RenameFailed(reason string) {
 	updateData["rename_time"] = sm.RenameTime
 	if err := db.Db.Model(&ScrapeMediaFile{}).Where("id = ?", sm.ID).Updates(updateData).Error; err != nil {
 		helpers.AppLogger.Errorf("更新刮削媒体失败: id=%d %v", sm.ID, err)
+	}
+	ctx := context.Background()
+	notif := &Notification{
+		Type:      ScrapeError,
+		Title:     fmt.Sprintf("❌ %s 整理失败", sm.Name),
+		Content:   fmt.Sprintf("失败原因: %s\n⏰ 时间: %s", sm.FailedReason, time.Now().Format("2006-01-02 15:04:05")),
+		Timestamp: time.Now(),
+		Priority:  NormalPriority,
+	}
+	if notificationmanager.GlobalEnhancedNotificationManager != nil {
+		if err := notificationmanager.GlobalEnhancedNotificationManager.SendNotification(ctx, notif); err != nil {
+			helpers.AppLogger.Errorf("发送电影或电视剧整理失败通知失败: %v", err)
+		}
 	}
 }
 

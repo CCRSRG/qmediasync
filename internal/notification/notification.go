@@ -73,6 +73,7 @@ const (
 	SyncFinished   NotificationType = "sync_finish"
 	SyncError      NotificationType = "sync_error"
 	ScrapeFinished NotificationType = "scrape_finish"
+	ScrapeError    NotificationType = "scrape_error"
 	SystemAlert    NotificationType = "system_alert"
 	MediaAdded     NotificationType = "media_added"
 	MediaRemoved   NotificationType = "media_removed"
@@ -86,6 +87,7 @@ var AllNotificationTypes = []NotificationType{
 	SyncFinished,
 	SyncError,
 	ScrapeFinished,
+	ScrapeError,
 	SystemAlert,
 	MediaAdded,
 	MediaRemoved,
