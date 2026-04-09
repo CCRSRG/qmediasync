@@ -575,6 +575,29 @@ else
 
     print_colored "cyan" "Creating Gitee release $TAG..."
 
+    # 检查Gitee上是否已存在该标签
+    print_colored "cyan" "Checking if tag $TAG exists on Gitee..."
+    TAG_EXISTS=$(curl -s -X GET \
+        "${GITEE_API_BASE}/repos/${GITEE_REPO}/tags?access_token=${GITEE_ACCESS_TOKEN}&page=1&per_page=100" \
+        | grep -c "\"name\":\"${TAG}\""
+    )
+
+    if [ "$TAG_EXISTS" -eq 0 ]; then
+        print_colored "cyan" "Tag $TAG not found on Gitee, will create during release"
+    else
+        print_colored "yellow" "Tag $TAG already exists on Gitee, deleting old tag..."
+        # 删除Gitee上已存在的标签
+        DELETE_TAG_RESPONSE=$(curl -s -X DELETE \
+            "${GITEE_API_BASE}/repos/${GITEE_REPO}/tags/${TAG}?access_token=${GITEE_ACCESS_TOKEN}"
+        )
+        if echo "$DELETE_TAG_RESPONSE" | grep -q "message"; then
+            print_colored "red" "Error: Failed to delete tag $TAG"
+            print_colored "yellow" "Response: $DELETE_TAG_RESPONSE"
+        else
+            print_colored "green" "✓ Deleted old tag $TAG"
+        fi
+    fi
+
     GITEE_RELEASE_RESPONSE=$(curl -s -X POST \
         "${GITEE_API_BASE}/repos/${GITEE_REPO}/releases" \
         -H "Content-Type: application/json" \
