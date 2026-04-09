@@ -59,6 +59,13 @@ if [ -n "$VERSION" ]; then
     TAG="$VERSION"
     git tag "$TAG"
     git push origin "$TAG"
+    # Also push tag to Gitee
+    if git remote | grep -q gitee; then
+        git push gitee "$TAG"
+        print_colored "cyan" "Pushed tag $TAG to Gitee"
+    else
+        print_colored "yellow" "Warning: Gitee remote not found, skipping push to Gitee"
+    fi
     print_colored "cyan" "Using provided version: $TAG"
 else
     # Auto-detect existing tag
@@ -586,15 +593,16 @@ else
         print_colored "cyan" "Tag $TAG not found on Gitee, will create during release"
     else
         print_colored "yellow" "Tag $TAG already exists on Gitee, deleting old tag..."
-        # 删除Gitee上已存在的标签
-        DELETE_TAG_RESPONSE=$(curl -s -X DELETE \
-            "${GITEE_API_BASE}/repos/${GITEE_REPO}/tags/${TAG}?access_token=${GITEE_ACCESS_TOKEN}"
-        )
-        if echo "$DELETE_TAG_RESPONSE" | grep -q "message"; then
-            print_colored "red" "Error: Failed to delete tag $TAG"
-            print_colored "yellow" "Response: $DELETE_TAG_RESPONSE"
+        # 使用git命令删除Gitee上的标签
+        if git remote | grep -q gitee; then
+            git push gitee --delete "$TAG"
+            if [ $? -eq 0 ]; then
+                print_colored "green" "✓ Deleted old tag $TAG from Gitee"
+            else
+                print_colored "red" "Error: Failed to delete tag $TAG from Gitee"
+            fi
         else
-            print_colored "green" "✓ Deleted old tag $TAG"
+            print_colored "yellow" "Warning: Gitee remote not found, skipping tag deletion"
         fi
     fi
 
