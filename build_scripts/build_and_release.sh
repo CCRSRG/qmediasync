@@ -596,17 +596,6 @@ else
         print_colored "cyan" "Tag $TAG not found on Gitee, will create during release"
     else
         print_colored "yellow" "Tag $TAG already exists on Gitee, deleting old tag..."
-        # 使用git命令删除Gitee上的标签
-        if git remote | grep -q gitee; then
-            git push gitee --delete "$TAG"
-            if [ $? -eq 0 ]; then
-                print_colored "green" "✓ Deleted old tag $TAG from Gitee"
-            else
-                print_colored "red" "Error: Failed to delete tag $TAG from Gitee"
-            fi
-        else
-            print_colored "yellow" "Warning: Gitee remote not found, skipping tag deletion"
-        fi
     fi
 
     GITEE_RELEASE_RESPONSE=$(curl -s -X POST \
