@@ -559,7 +559,7 @@ else
     RELEASE_COUNT=$(echo "$EXISTING_RELEASES" | grep -c '"id"' || true)
     print_colored "cyan" "Found $RELEASE_COUNT existing Gitee releases"
 
-    MAX_RELEASES=10
+    MAX_RELEASES=4
     if [ "$RELEASE_COUNT" -ge "$MAX_RELEASES" ]; then
         print_colored "yellow" "Too many releases ($RELEASE_COUNT), cleaning up old releases (keeping latest $MAX_RELEASES)..."
 
