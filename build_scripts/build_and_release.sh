@@ -55,13 +55,16 @@ fi
 
 # Determine tag
 if [ -n "$VERSION" ]; then
+    git checkout -- .
+    git pull origin main
+    git push gitee main -f
     # Use provided version parameter
     TAG="$VERSION"
     git tag "$TAG"
     git push origin "$TAG"
     # Also push tag to Gitee
     if git remote | grep -q gitee; then
-        git push gitee "$TAG"
+        git push gitee "$TAG" -f
         print_colored "cyan" "Pushed tag $TAG to Gitee"
     else
         print_colored "yellow" "Warning: Gitee remote not found, skipping push to Gitee"
